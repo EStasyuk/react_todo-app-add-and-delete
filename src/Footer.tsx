@@ -13,12 +13,13 @@ export const Footer: React.FC<Props> = ({
   activeTodosCount,
   currentFilter,
   onFilterChange,
+  onClearCompleted,
   hasCompletedTodos,
 }) => {
   const filters: Filter[] = ['All', 'Active', 'Completed'];
 
   const handleClearCompleted = () => {
-    // onClearCompleted();
+    onClearCompleted();
   };
 
   return (

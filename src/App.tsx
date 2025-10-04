@@ -8,7 +8,7 @@ import React, {
   useRef,
 } from 'react';
 import { UserWarning } from './UserWarning';
-import { Todo, Filter } from './types/Todo';
+import { Todo, Filter, ErrorType } from './types/Todo';
 import { getTodos, USER_ID, createTodo, deleteTodo } from './api/todos';
 
 import { TodoItem } from './TodoItem';
@@ -48,7 +48,7 @@ export const App: React.FC = () => {
 
         setTodos(data);
       } catch (e) {
-        showError('Unable to load todos');
+        showError(ErrorType.LoadTodos);
       } finally {
         setLoading(false);
       }
@@ -103,7 +103,7 @@ export const App: React.FC = () => {
       const trimmedTitle = title.trim();
 
       if (trimmedTitle === '') {
-        showError('Title should not be empty');
+        showError(ErrorType.TitleEmpty);
 
         return;
       }
@@ -123,14 +123,17 @@ export const App: React.FC = () => {
 
         return true;
       } catch (e) {
-        showError('Unable to add a todo');
+        showError(ErrorType.AddTodo);
 
         return false;
       } finally {
         setTempTodo(null);
 
         setProcessingTodos(prev => prev.filter(id => id !== 0));
-        newTodoFieldRef.current?.focus();
+
+        setTimeout(() => {
+          newTodoFieldRef.current?.focus();
+        }, 0);
       }
     },
     [showError, clearError],
@@ -145,15 +148,17 @@ export const App: React.FC = () => {
         await deleteTodo(todoId);
         setTodos(prevTodos => prevTodos.filter(todo => todo.id !== todoId));
       } catch (e) {
-        showError('Unable to delete a todo');
+        showError(ErrorType.DeleteTodo);
       } finally {
         setProcessingTodos(prev => prev.filter(id => id !== todoId));
+
+        newTodoFieldRef.current?.focus();
       }
     },
     [showError, clearError],
   );
 
-  const handleClearCopleted = useCallback(async () => {
+  const handleClearCompleted = useCallback(async () => {
     clearError();
     const completedTodos = todos.filter(todo => todo.completed);
 
@@ -173,17 +178,23 @@ export const App: React.FC = () => {
 
         return { id: todo.id, success: false };
       } finally {
-        setProcessingTodos(prev => prev.filter(id => id !== todo.id));
+        //setProcessingTodos(prev => prev.filter(id => id !== todo.id));
       }
     });
 
     const results = await Promise.all(deletionPromises);
+
+    const successfulIds = results.filter(res => res.success).map(res => res.id);
+
+    setProcessingTodos(prev => prev.filter(id => !successfulIds.includes(id)));
 
     setTodos(prevTodos =>
       prevTodos.filter(
         todo => !results.some(res => res.id === todo.id && res.success),
       ),
     );
+
+    newTodoFieldRef.current?.focus();
   }, [todos, showError, clearError]);
 
   if (!USER_ID) {
@@ -219,7 +230,7 @@ export const App: React.FC = () => {
                 key={todo.id}
                 todo={todo}
                 onDelete={handleDeleteTodo}
-                isLoading={processingTodos.includes(todos.id)}
+                isLoading={processingTodos.includes(todo.id)}
               />
             ))}
             {tempTodo && (
@@ -239,7 +250,7 @@ export const App: React.FC = () => {
             currentFilter={filter}
             onFilterChange={handleFilterChange}
             hasCompletedTodos={hasCompletedTodos}
-            onClearCompleted={handleClearCopleted}
+            onClearCompleted={handleClearCompleted}
           />
         )}
       </div>
